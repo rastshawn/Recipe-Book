@@ -1,0 +1,21 @@
+<h1>{{meal.Name}}</h1>
+
+<h2>Difficulty</h2>
+<p>{{meal.Difficulty}}</p>
+
+<h2>Type</h2>
+<p>{{meal.Type}}</p>
+
+<h2>Ingredients</h2>
+<table>
+{{#each ingredients}}
+	<tr>
+		<td>{{Amount}}</td>
+		<td>{{Name}}</td>
+	</tr>
+{{/each}}
+</table>
+
+<h2>Steps</h2>
+<p>{{{meal.Steps}}}</p>
+
