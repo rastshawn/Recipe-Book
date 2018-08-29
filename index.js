@@ -7,22 +7,41 @@ var hbs = handlebars.create({
 var app = express();
 
 var mysql = require('mysql');
+
+// make a file called credentials.js where exports contains:
+/*
+module.exports = {
+	"user" : "yourUsername",
+	"password" : "yourPassword",
+	"host" : "localhost",
+	"database" : "yourDatabase"
+};
+*/
 var credentials = require('./credentials.js');
 
 var connection = mysql.createConnection(credentials);
 
+// connect to the database, alert if there's a problem
 connection.connect(function(err) {
 	if (err) throw err;
 	console.log("Connected");
-	//getMealInfo(1);
 });
+
+// Let the app use Handlebars for templating
 app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');
+
+// Run on the specified port
 app.listen(4000);
+
+// Homepage function
 app.get('/', function(req, res){
 	res.send("it found it");
 });
 
+
+// Render the recipes template with the specified recipe number.
+// /recipes/1 passes this function 1
 app.get('/recipes/:recipe?', function(req, res){
 	var mealID = req.params.recipe;
 	getMealInfo(mealID).then((meal) => {
