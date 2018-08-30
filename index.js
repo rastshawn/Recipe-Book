@@ -1,11 +1,12 @@
 var express = require('express');
+var bodyParser = require('body-parser');
 var handlebars = require('express-handlebars');
 var hbs = handlebars.create({
 	defaultLayout: 'default',
 	partialsDir : 'views/partials/'
 });
 var app = express();
-
+app.use(bodyParser.json());
 var mysql = require('mysql');
 
 // make a file called credentials.js where exports contains:
@@ -38,6 +39,94 @@ app.listen(4000);
 app.get('/', function(req, res){
 	res.send("it found it");
 });
+
+// THIS IS WILDLY INSECURE.
+// Only enable when you're adding recipes. Run preferably on an internal port.
+var admin = false;
+if (admin) {
+		app.get('/admin', function(req, res){
+			res.render('add');
+		});
+
+		app.get('/admin/searchIngredients/:query?', function(req, res) {
+			var query = req.params.query;
+			connection.query("SELECT * FROM Ingredient WHERE Name LIKE '%" + query + "%'",
+				function(err, result) {
+					if (err) {
+						res.send("something broke");
+						return;
+					}
+
+					res.send(result);	
+				}
+			); 
+		});
+		
+		app.post('/admin/ingredient/:name', function(req, res) {
+			var name = req.params.name;
+			connection.query("INSERT INTO Ingredient (Name) VALUES ('" + name + "')",
+				function(err, result) {
+					if(err) {
+						res.send("something broke");
+						return;
+					}
+
+					res.send("success!");
+				}
+			);
+		});
+
+		app.post('/admin/meal', function(req, res) {
+			console.log(req.body);
+			var query = "INSERT INTO Meal (Steps, Difficulty, Type, Name) VALUES ";
+			query += '("' + req.body.steps + '", ' + 
+						req.body.difficulty + ", " + 
+						req.body.type + ", " +
+						'"' + req.body.name + '")';
+			console.log(query);
+			connection.query(query, function(err, result) {
+				if (err) {
+					res.send("something broke");
+					return;
+				}
+				
+				connection.query("SELECT LAST_INSERT_ID() AS MealID", function(err, result){
+					if (err) {
+						res.send("something broke");
+						return;
+					}
+					res.send(result[0]);
+				});
+			}); 	
+		});
+
+		app.post('/admin/mealIngredients', function(req, res) {
+			// make VALUES for sql insert
+			var MealID = req.body.MealID;
+			var VALUES = ""; // (Amount, MealID, IngredientID)	
+			req.body.IngredientAmounts.forEach(function(e){
+				VALUES += "(" + 
+					'"'+e.Amount+'", ' + 
+					MealID + ", " + 
+					e.IngredientID +
+					"),";
+			});
+			// remove trailing comma from string
+			VALUES = VALUES.substring(0, VALUES.length-1);
+
+			var query = "INSERT INTO MealIngredient (Amount, MealID, IngredientID) " +
+					"VALUES " + VALUES;
+			console.log(query);
+			connection.query(query, function(err, result) {
+				if (err) {
+					res.send("something broke");
+					return;
+				}
+
+				res.send("success");			
+			});
+		});
+}
 
 
 // Render the recipes template with the specified recipe number.

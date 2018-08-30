@@ -1,0 +1,168 @@
+<script>
+function IngredientAmount(IngredientName, IngredientID, Amount){
+	this.IngredientName = IngredientName;
+	this.IngredientID = IngredientID;
+	this.Amount = Amount;
+}
+
+var IngredientAmounts = [];
+
+$(document).ready(function(){
+	$("#addIngredient").click(function(e){
+		addIngredientToDatabase($("#searchIngredients").val());	
+	});
+	$("#searchIngredients").on('keyup', searchIngredients);
+});
+
+function searchIngredients(){
+var search = $("#searchIngredients").val();
+
+		$.ajax({
+			"method" : "get",
+			"url" : "/admin/searchIngredients/" + search,
+			success: function(response) {
+				console.log(response);
+
+				$("#searchResults").html("");
+				response.forEach(function(element){
+					var html = "<div>";
+					html += "<p style='display:inline'>" + element.Name + "</p>";
+					html += " <input class='amount' />";
+					html += " <a class='addIngredientAmount'";
+					html += " IngredientID='" + element.IngredientID + "'>Add</a>";
+					html += "</div>";
+
+					$("#searchResults").append(html);	
+				});
+
+				$(".addIngredientAmount").click(addIngredientAmount);
+
+			},
+			error: function(err) { 
+				console.log(err);
+			}
+		});
+
+}
+
+function addIngredientAmount(e) {
+	console.log(e);
+	var parent = $(event.target).parent();
+	var IngredientName = parent.find("p").html();
+	var IngredientID = event.target.attributes.IngredientID.value;
+	var Amount = parent.find(".amount").val();
+	IngredientAmounts.push(new IngredientAmount(IngredientName, IngredientID, Amount));
+	//console.log(IngredientAmounts);
+
+	$("#addedIngredients").html("<h3>Added Ingredients</h3> <table>");
+	IngredientAmounts.forEach(function(e) {
+		var html = "<tr>";
+		html += "<td>" + e.Amount + "</td>";
+		html += "<td>" + e.IngredientName + "</td>";
+		html += "</tr>";
+		$("#addedIngredients").append(html);
+	});
+	$("#addedIngredients").append("</table>");	
+}
+
+function addIngredientToDatabase(IngredientName){
+	$.ajax({
+		method: "POST",
+		url: "/admin/ingredient/" + IngredientName,
+		success: function(response) {
+			searchIngredients();	
+		},
+		error: function(err){
+			console.log(err);
+		}
+	});
+}
+
+function addMealToServer() {
+	return new Promise((resolve, reject) => {
+		var steps = $("#steps").val();
+		var difficulty = $("#difficulty").val();
+		var type = $("#type").val();
+		var name = $("#mealName").val();
+		var body = {
+			"name" : name,
+			"steps" : steps,
+			"difficulty" : difficulty,
+			"type" : type
+		};
+
+		$.ajax({
+			type:'POST',
+			url: '/admin/meal',
+			headers: {
+				'Content-Type' : 'application/json'
+			},
+			data : JSON.stringify(body),
+			success: function(response) {
+				resolve(response.MealID);
+			},
+			error: function(err) {
+				reject(err);
+			}		
+		});
+	});
+}
+
+function addMealIngredientsToServer(MealID) {
+	return new Promise((resolve, reject) => {
+		var body = {
+			"IngredientAmounts" : IngredientAmounts,
+			"MealID" : MealID
+		};
+
+		$.ajax({
+			type:'POST',
+			url: '/admin/mealIngredients',
+			headers: {
+				'Content-Type' : 'application/json'
+			},
+			data : JSON.stringify(body),
+			success: function(response) {
+				resolve(response.MealID);
+			},
+			error: function(err) {
+				reject(err);
+			}		
+		});
+	});
+
+}
+
+function addMeal() {
+	addMealToServer()
+		.then(addMealIngredientsToServer)
+		.then(function(reject, resolve){
+			var text = "success";
+			$("#ingredients").html(text);
+		});
+}
+
+
+</script>
+
+<div id="ingredients">
+	<input id=searchIngredients />
+	<a id="addIngredient">Add new ingredient</a>
+	<div id="searchResults">
+	</div>
+	<div id="addedIngredients">
+	</div>
+</div>
+
+<h2>Name</h2>
+<input id="mealName" />
+<h2>steps</h2>
+<textarea id="steps"></textarea>
+
+<h2>difficulty</h2>
+<input id="difficulty" />
+
+<h2>type</h2>
+<input id="type" />
+
+<a onclick="addMeal()">add meal</a>
