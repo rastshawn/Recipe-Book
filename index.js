@@ -22,6 +22,20 @@ var credentials = require('./credentials.js');
 
 var connection = mysql.createConnection(credentials);
 
+
+
+//// ENABLING ADMIN IS VERY INSECURE. ONLY USE FOR ADDING RECIPES
+var PORT = 4000;
+var admin = false;
+process.argv.forEach(function (arg) {
+     if (arg == "-admin") {
+        admin = true;
+        PORT = 4001;
+     }
+});
+
+
+
 // connect to the database, alert if there's a problem
 connection.connect(function(err) {
 	if (err) throw err;
@@ -33,16 +47,26 @@ app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');
 
 // Run on the specified port
-app.listen(4000);
+app.listen(PORT);
 
 // Homepage function
 app.get('/', function(req, res){
-	res.send("it found it");
+	connection.query(
+		"SELECT MealID, Name, Difficulty FROM Meal",
+		function(err, response){
+			if (err) {
+				res.send("something broke");
+				return;
+			}
+
+			res.render('home', {"recipes" : response});
+		}
+	);
+
 });
 
 // THIS IS WILDLY INSECURE.
 // Only enable when you're adding recipes. Run preferably on an internal port.
-var admin = false;
 if (admin) {
 		app.get('/admin', function(req, res){
 			res.render('add');
